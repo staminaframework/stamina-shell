@@ -27,6 +27,7 @@
     </parent>
     <name>Stamina Shell</name>
     <artifactId>io.staminaframework.shell</artifactId>
+    <url>http://staminaframework.io/${project.artifactId}</url>
 
     <dependencies>
         <dependency>
