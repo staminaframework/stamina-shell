@@ -65,11 +65,6 @@ public class Shell {
 
     @Activate
     public void activate(BundleContext bundleContext, Config config) throws IOException {
-        if (commandLine != null) {
-            // Skip shell startup if a command-line is being executed.
-            return;
-        }
-
         // Most of this code is taken from the Apache Felix Gogo JLine bundle.
 
         terminal = TerminalBuilder.builder()
@@ -171,10 +166,14 @@ public class Shell {
                 terminal.handle(Terminal.Signal.TSTP, suspHandler);
             }
 
-            final Bundle sys = bundleContext.getBundle(Constants.SYSTEM_BUNDLE_LOCATION);
             try {
-                sys.stop();
-            } catch (BundleException ignore) {
+                final Bundle sys = bundleContext.getBundle(Constants.SYSTEM_BUNDLE_LOCATION);
+                try {
+                    sys.stop();
+                } catch (BundleException ignore) {
+                }
+            } catch (IllegalStateException ignore) {
+                // The platform is already shutting down.
             }
         };
         shellThread = new Thread(shellHandler, "Stamina Shell");
