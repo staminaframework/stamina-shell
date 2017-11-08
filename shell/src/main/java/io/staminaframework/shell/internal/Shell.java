@@ -17,6 +17,8 @@
 package io.staminaframework.shell.internal;
 
 import io.staminaframework.boot.CommandLine;
+import io.staminaframework.command.Command;
+import io.staminaframework.command.CommandConstants;
 import org.apache.felix.service.command.*;
 import org.jline.reader.*;
 import org.jline.reader.impl.DefaultParser;
@@ -31,6 +33,11 @@ import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.log.LogService;
 
 import java.io.IOException;
+import java.io.PrintStream;
+import java.util.Collections;
+import java.util.Dictionary;
+import java.util.Hashtable;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -64,7 +71,7 @@ public class Shell {
     private final AtomicBoolean running = new AtomicBoolean();
 
     @Activate
-    public void activate(BundleContext bundleContext, Config config) throws IOException {
+    void activate(BundleContext bundleContext, Config config) throws IOException {
         // Most of this code is taken from the Apache Felix Gogo JLine bundle.
 
         terminal = TerminalBuilder.builder()
@@ -105,13 +112,82 @@ public class Shell {
             }
         });
 
+        final boolean interactive = commandLine == null || !commandLine.command().equals("shell:exec");
+
         logService.log(LogService.LOG_INFO, "Starting command-line shell");
         final Runnable shellHandler = () -> {
+            Thread.currentThread().setUncaughtExceptionHandler((t, e) -> {
+                // Do nothing.
+            });
+
             try {
                 while (running.get()) {
-                    lineReader.readLine(config.prompt());
+                    ParsedLine parsedLine;
+                    if (!interactive && commandLine.command().equals("shell:exec")) {
+                        final String cmdLine = String.join(" ", commandLine.arguments());
+                        logService.log(LogService.LOG_INFO, "Executing Shell command-line: $ " + cmdLine);
 
-                    ParsedLine parsedLine = lineReader.getParsedLine();
+                        // Register an empty command, since we are doing the hard work.
+                        final Dictionary<String, Object> cmdProps = new Hashtable<>(1);
+                        cmdProps.put(CommandConstants.COMMAND, "shell:exec");
+                        bundleContext.registerService(Command.class, new Command() {
+                            @Override
+                            public void help(PrintStream printStream) {
+                            }
+
+                            @Override
+                            public boolean execute(Context context) throws Exception {
+                                return false;
+                            }
+                        }, cmdProps);
+
+                        // Shell is stopped once command has been executed.
+                        running.set(false);
+
+                        // Pretend an user just typed a command.
+                        parsedLine = new ParsedLine() {
+                            @Override
+                            public String word() {
+                                return "";
+                            }
+
+                            @Override
+                            public int wordCursor() {
+                                return 0;
+                            }
+
+                            @Override
+                            public int wordIndex() {
+                                return 0;
+                            }
+
+                            @Override
+                            public List<String> words() {
+                                return Collections.emptyList();
+                            }
+
+                            @Override
+                            public String line() {
+                                return cmdLine;
+                            }
+
+                            @Override
+                            public int cursor() {
+                                return 0;
+                            }
+                        };
+
+                        // Workaround for a weird bug in command processor:
+                        // if a command is executed too soon, an exception is raised
+                        // and a stacktrace is printed on console...
+                        try {
+                            Thread.sleep(1000);
+                        } catch (InterruptedException ignore) {
+                        }
+                    } else {
+                        lineReader.readLine(config.prompt());
+                        parsedLine = lineReader.getParsedLine();
+                    }
                     if (parsedLine == null) {
                         throw new EndOfFileException();
                     } else {
@@ -166,6 +242,12 @@ public class Shell {
                 terminal.handle(Terminal.Signal.TSTP, suspHandler);
             }
 
+            session.close();
+            try {
+                terminal.close();
+            } catch (IOException ignore) {
+            }
+
             try {
                 final Bundle sys = bundleContext.getBundle(Constants.SYSTEM_BUNDLE_LOCATION);
                 try {
@@ -183,30 +265,15 @@ public class Shell {
     }
 
     @Deactivate
-    public void deactivate() {
-        if (commandLine != null) {
-            return;
-        }
-
+    void deactivate() {
         running.set(false);
         if (shellThread != null) {
             shellThread.interrupt();
             try {
-                shellThread.join(1000);
+                shellThread.join(4000);
             } catch (InterruptedException ignore) {
             }
             shellThread = null;
-        }
-        if (terminal != null) {
-            try {
-                terminal.close();
-            } catch (IOException ignore) {
-            }
-            terminal = null;
-        }
-        if (session != null) {
-            session.close();
-            session = null;
         }
     }
 }
