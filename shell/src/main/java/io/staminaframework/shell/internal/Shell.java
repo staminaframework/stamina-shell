@@ -16,9 +16,9 @@
 
 package io.staminaframework.shell.internal;
 
-import io.staminaframework.boot.CommandLine;
-import io.staminaframework.command.Command;
-import io.staminaframework.command.CommandConstants;
+import io.staminaframework.runtime.boot.CommandLine;
+import io.staminaframework.runtime.command.Command;
+import io.staminaframework.runtime.command.CommandConstants;
 import org.apache.felix.service.command.*;
 import org.jline.reader.*;
 import org.jline.reader.impl.DefaultParser;
