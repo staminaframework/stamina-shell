@@ -21,7 +21,7 @@
     <parent>
         <groupId>io.staminaframework.shell</groupId>
         <artifactId>parent</artifactId>
-        <version>0.1.0</version>
+        <version>0.2.0-SNAPSHOT</version>
     </parent>
     <name>Stamina Shell Addon</name>
     <groupId>io.staminaframework.addons</groupId>

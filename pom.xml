@@ -26,7 +26,7 @@
 
     <groupId>io.staminaframework.shell</groupId>
     <artifactId>parent</artifactId>
-    <version>0.1.0</version>
+    <version>0.2.0-SNAPSHOT</version>
     <name>Stamina Shell Parent</name>
     <packaging>pom</packaging>
 
@@ -45,7 +45,7 @@
     <scm>
         <url>http://github.com/staminaframework/stamina-shell</url>
         <connection>scm:git:https://github.com/staminaframework/stamina-shell.git</connection>
-        <tag>stamina-shell-0.1.0</tag>
+        <tag>HEAD</tag>
     </scm>
 
     <dependencyManagement>
